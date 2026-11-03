@@ -23,7 +23,11 @@ HarpUiNode *harp_ui_create(HarpUiType type)
     node->style.padding = 8;
     node->style.gap = 8;
     node->style.radius = 12;
-    node->style.opacity = 255;
+    node->style.opacity = type == HARP_UI_GLASS ? 92 : 255;
+    node->style.refraction = type == HARP_UI_GLASS ? 4 : 0;
+    node->style.blur_radius = type == HARP_UI_GLASS ? 2 : 0;
+    if (type == HARP_UI_GLASS)
+        node->style.background = 0xFFB9CBE2u;
     node->dirty = 1;
     return node;
 }
