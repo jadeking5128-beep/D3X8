@@ -5,6 +5,18 @@
 > [!WARNING]
 > There might be dragons and bugs.
 
+## Live GUI Preview
+
+> **GUI concept only.** This interactive browser preview demonstrates the D3X8 desktop visual direction. It is not an emulator and does not boot or execute the operating system.
+
+[**Open the live D3X8 GUI preview →**](https://jadeking5128-beep.github.io/D3X8/)
+
+[![D3X8 Liquid Glass GUI preview](preview/preview.svg)](https://jadeking5128-beep.github.io/D3X8/)
+
+The preview is deployed with GitHub Pages. Its color tokens are extracted automatically from Harp's native C theme in `userland/include/nk_harp.h` and desktop palette in `userland/files/harp/harp_draw.c` whenever the GUI source changes.
+
+---
+
 ## Overview
 
 **D3X8** is a 64-bit SMP preemptive operating system built from scratch in **C** and **x86_64 assembly**, bootstrapped with the **Limine** bootloader.
