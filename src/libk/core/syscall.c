@@ -602,47 +602,47 @@ static int64_t console_read_fallback(void *buffer, uint32_t size)
 
 static int64_t console_ioctl_fallback(unsigned long req, void *argp)
 {
+    task_t *cur = sched_current_task();
+    uint64_t user_arg = (uint64_t)(uintptr_t)argp;
+    if (!cur)
+        return -1;
+
     if (req == ZEN_TCGETS)
     {
-        if (!argp)
-            return -1;
-        zen_termios_t *tio = (zen_termios_t *)argp;
-        memset(tio, 0, sizeof(*tio));
-        tio->c_iflag = ZEN_ICRNL | ZEN_IXON;
-        tio->c_oflag = ZEN_OPOST | ZEN_ONLCR;
-        tio->c_cflag = ZEN_CS8 | ZEN_CREAD;
-        tio->c_lflag = ZEN_ISIG | ZEN_ICANON | ZEN_ECHO | ZEN_ECHOE | ZEN_ECHOK | ZEN_IEXTEN;
-        tio->c_cc[ZEN_VINTR] = 3;
-        tio->c_cc[ZEN_VQUIT] = 28;
-        tio->c_cc[ZEN_VERASE] = 127;
-        tio->c_cc[ZEN_VKILL] = 21;
-        tio->c_cc[ZEN_VEOF] = 4;
-        tio->c_cc[ZEN_VTIME] = 0;
-        tio->c_cc[ZEN_VMIN] = 1;
-        tio->c_cc[ZEN_VSTART] = 17;
-        tio->c_cc[ZEN_VSTOP] = 19;
-        tio->c_cc[ZEN_VSUSP] = 26;
-        return 0;
+        zen_termios_t tio;
+        memset(&tio, 0, sizeof(tio));
+        tio.c_iflag = ZEN_ICRNL | ZEN_IXON;
+        tio.c_oflag = ZEN_OPOST | ZEN_ONLCR;
+        tio.c_cflag = ZEN_CS8 | ZEN_CREAD;
+        tio.c_lflag = ZEN_ISIG | ZEN_ICANON | ZEN_ECHO | ZEN_ECHOE | ZEN_ECHOK | ZEN_IEXTEN;
+        tio.c_cc[ZEN_VINTR] = 3;
+        tio.c_cc[ZEN_VQUIT] = 28;
+        tio.c_cc[ZEN_VERASE] = 127;
+        tio.c_cc[ZEN_VKILL] = 21;
+        tio.c_cc[ZEN_VEOF] = 4;
+        tio.c_cc[ZEN_VTIME] = 0;
+        tio.c_cc[ZEN_VMIN] = 1;
+        tio.c_cc[ZEN_VSTART] = 17;
+        tio.c_cc[ZEN_VSTOP] = 19;
+        tio.c_cc[ZEN_VSUSP] = 26;
+        return copy_to_user(cur, user_arg, &tio, sizeof(tio));
     }
     if (req == ZEN_TCSETS || req == ZEN_TCSETSW || req == ZEN_TCSETSF)
         return 0;
     if (req == ZEN_TIOCGWINSZ)
     {
-        if (!argp)
-            return -1;
-        zen_winsize_t *ws = (zen_winsize_t *)argp;
-        ws->ws_col = framebuffer_width ? (uint16_t)(framebuffer_width / 8) : 80;
-        ws->ws_row = framebuffer_height ? (uint16_t)(framebuffer_height / 16) : 25;
-        ws->ws_xpixel = (uint16_t)framebuffer_width;
-        ws->ws_ypixel = (uint16_t)framebuffer_height;
-        return 0;
+        zen_winsize_t ws = {
+            .ws_col = framebuffer_width ? (uint16_t)(framebuffer_width / 8) : 80,
+            .ws_row = framebuffer_height ? (uint16_t)(framebuffer_height / 16) : 25,
+            .ws_xpixel = (uint16_t)framebuffer_width,
+            .ws_ypixel = (uint16_t)framebuffer_height
+        };
+        return copy_to_user(cur, user_arg, &ws, sizeof(ws));
     }
     if (req == ZEN_FIONREAD)
     {
-        if (!argp)
-            return -1;
-        *(int *)argp = (int)kbd_pending_chars();
-        return 0;
+        int pending = (int)kbd_pending_chars();
+        return copy_to_user(cur, user_arg, &pending, sizeof(pending));
     }
     return -1;
 }
