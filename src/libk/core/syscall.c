@@ -154,6 +154,8 @@ void syscall_release_special_user_mappings(page_table_t *pml4)
     spinlock_release(&shm_lock);
 }
 
+static int copy_from_user(task_t *task, void *dst, uint64_t src, size_t len);
+
 static int unix_sock_copy_user_path(task_t *task, const sa_un_t *addr, char *out, size_t out_len)
 {
     sa_un_t local;
