@@ -28,6 +28,8 @@ typedef struct {
     uint16_t radius;
     uint8_t opacity;
     uint8_t glass;
+    uint8_t refraction;
+    uint8_t blur_radius;
 } HarpUiStyle;
 
 typedef struct HarpUiNode HarpUiNode;
@@ -54,7 +56,8 @@ typedef struct {
     void (*fill_rect)(void *userdata, int x, int y, int w, int h,
                       int radius, uint32_t color, uint8_t opacity);
     void (*glass_rect)(void *userdata, int x, int y, int w, int h,
-                       int radius, uint32_t tint, uint8_t opacity);
+                       int radius, uint32_t tint, uint8_t opacity,
+                       uint8_t refraction, uint8_t blur_radius);
     void (*draw_text)(void *userdata, int x, int y, int max_w,
                       uint32_t color, const char *text);
     int (*measure_text)(void *userdata, const char *text);
