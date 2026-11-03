@@ -913,38 +913,49 @@ task_t *sched_get_task_list(void)
     return task_list_head;
 }
 
-uint32_t sched_list_tasks(task_info_t *infos, uint32_t max_count)
+int64_t sched_list_tasks(task_info_t *infos, uint32_t max_count)
 {
-    if (!infos || max_count == 0)
+    task_t *current = sched_current_task();
+    if (max_count == 0)
         return 0;
+    if (!current || !infos)
+        return -14;
+
+    if (max_count > MAX_TASKS)
+        max_count = MAX_TASKS;
+    size_t bytes = (size_t)max_count * sizeof(task_info_t);
+    if (user_copy_validate(current, (uint64_t)(uintptr_t)infos, bytes, 1) < 0)
+        return -14;
+
+    task_info_t *snapshot = (task_info_t *)kmalloc(bytes);
+    if (!snapshot)
+        return -12;
 
     uint64_t rflags = spinlock_acquire_irqsave(&sched_lock);
-    if (!task_list_head)
-    {
-        spinlock_release_irqrestore(&sched_lock, rflags);
-        return 0;
-    }
-
     uint32_t count = 0;
-    task_t *iter = task_list_head;
-    do
+    if (task_list_head)
     {
-        if (count >= max_count)
-            break;
-
-        if (iter->state != TASK_DEAD)
+        task_t *iter = task_list_head;
+        do
         {
-            infos[count].pid = iter->pid;
-            strncpy(infos[count].name, iter->name, sizeof(infos[count].name) - 1);
-            infos[count].name[sizeof(infos[count].name) - 1] = '\0';
-            count++;
-        }
-
-        iter = iter->next;
-    } while (iter != task_list_head);
-
+            if (count >= max_count)
+                break;
+            if (iter->state != TASK_DEAD)
+            {
+                snapshot[count].pid = iter->pid;
+                strncpy(snapshot[count].name, iter->name, sizeof(snapshot[count].name) - 1);
+                snapshot[count].name[sizeof(snapshot[count].name) - 1] = '\0';
+                count++;
+            }
+            iter = iter->next;
+        } while (iter != task_list_head);
+    }
     spinlock_release_irqrestore(&sched_lock, rflags);
-    return count;
+
+    int copy_result = count ? copy_to_user(current, (uint64_t)(uintptr_t)infos,
+                                            snapshot, (size_t)count * sizeof(task_info_t)) : 0;
+    kfree(snapshot);
+    return copy_result < 0 ? -14 : (int64_t)count;
 }
 
 int sched_futex_wait(volatile uint32_t *uaddr, uint32_t expected)
@@ -1050,36 +1061,9 @@ static int write_wait_status(task_t *task, int *status_ptr, int value)
 {
     if (!status_ptr)
         return 0;
-    if (!task || !task->pml4)
-        return -1;
-
-    uint64_t uaddr = (uint64_t)status_ptr;
-    uint64_t page0 = uaddr & ~(uint64_t)(PAGE_SIZE - 1);
-    uint64_t off0 = uaddr & (PAGE_SIZE - 1);
-    uint64_t phys0 = virt_to_phys(task->pml4, page0);
-    if (!phys0)
-        return -1;
-
-    uint8_t bytes[sizeof(int)];
-    memcpy(bytes, &value, sizeof(int));
-
-    uint8_t *dst0 = (uint8_t *)(phys0 + KERNEL_VIRT_OFFSET + off0);
-    size_t first = PAGE_SIZE - off0;
-    if (first >= sizeof(int))
-    {
-        memcpy(dst0, bytes, sizeof(int));
-        return 0;
-    }
-
-    memcpy(dst0, bytes, first);
-
-    uint64_t page1 = page0 + PAGE_SIZE;
-    uint64_t phys1 = virt_to_phys(task->pml4, page1);
-    if (!phys1)
-        return -1;
-
-    uint8_t *dst1 = (uint8_t *)(phys1 + KERNEL_VIRT_OFFSET);
-    memcpy(dst1, bytes + first, sizeof(int) - first);
+    if (!task || copy_to_user(task, (uint64_t)(uintptr_t)status_ptr,
+                              &value, sizeof(value)) < 0)
+        return -14;
     return 0;
 }
 
