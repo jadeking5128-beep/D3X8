@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10141c">
+<title>D3X8 · Live GUI Preview</title>
+<style>
+:root{color-scheme:dark;--accent:#0a84ff;--bg:#0b1018;--fg:#f4f7fc;--muted:#9ca9ba;--glass:rgba(30,42,59,.48);--line:rgba(255,255,255,.16);--shadow:0 28px 90px rgba(0,0,0,.48)}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--fg);background:#0b1018}
+button,input{font:inherit}button{color:inherit;cursor:pointer}
+#desktop{position:relative;width:100%;height:100%;overflow:hidden;background:radial-gradient(ellipse at 18% 14%,rgba(41,105,157,.72),transparent 34%),radial-gradient(ellipse at 83% 22%,rgba(98,75,145,.56),transparent 34%),radial-gradient(ellipse at 53% 92%,rgba(15,82,107,.68),transparent 40%),linear-gradient(145deg,#0b1523 0%,#17253a 46%,#111827 100%)}
+#desktop:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,9,16,.08),transparent 45%,rgba(3,7,12,.38)),url("data:image/svg+xml,%3Csvg viewBox='0 0 1600 900' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");pointer-events:none}
+#desktop:after{content:"";position:absolute;left:-10%;right:-10%;bottom:-23%;height:56%;background:linear-gradient(165deg,transparent 8%,rgba(9,26,39,.82) 9%,rgba(9,24,38,.9) 42%,rgba(7,13,23,.96) 43%);clip-path:polygon(0 48%,16% 27%,28% 40%,46% 4%,59% 31%,73% 12%,100% 50%,100% 100%,0 100%);filter:drop-shadow(0 -20px 30px rgba(68,139,180,.18));pointer-events:none}
+#menubar{position:absolute;z-index:50;top:12px;left:18px;right:18px;height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 15px;border:1px solid rgba(255,255,255,.2);border-radius:15px;background:rgba(15,24,37,.38);backdrop-filter:blur(28px) saturate(1.5);-webkit-backdrop-filter:blur(28px) saturate(1.5);box-shadow:0 8px 30px rgba(0,0,0,.14)}
+.menu-left,.menu-right{display:flex;align-items:center;gap:17px;font-size:12px;font-weight:570}.brand{font-weight:800;letter-spacing:.04em}.menulink{opacity:.86}.status{display:flex;gap:7px;align-items:center;opacity:.9}.status svg{width:14px;height:14px}
+#desktop-label{position:absolute;top:75px;left:30px;z-index:1;color:rgba(255,255,255,.72);font-size:12px;letter-spacing:.18em;text-transform:uppercase}
+#window-layer{position:absolute;inset:0;z-index:10;pointer-events:none}
+.window{position:absolute;pointer-events:auto;min-width:300px;min-height:210px;overflow:hidden;border:1px solid rgba(255,255,255,.23);border-radius:18px;background:linear-gradient(145deg,rgba(41,54,72,.65),rgba(17,25,38,.55));backdrop-filter:blur(32px) saturate(1.45);-webkit-backdrop-filter:blur(32px) saturate(1.45);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.24);animation:appear .32s cubic-bezier(.2,.8,.2,1)}
+.window:before{content:"";position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.68),transparent);pointer-events:none}
+@keyframes appear{from{opacity:0;transform:translateY(12px) scale(.975)}to{opacity:1;transform:none}}
+.titlebar{height:46px;display:flex;align-items:center;gap:12px;padding:0 15px;border-bottom:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.055);cursor:grab;user-select:none}
+.traffic{display:flex;gap:7px}.traffic button{border:0;padding:0;width:11px;height:11px;border-radius:50%;font-size:0}.close{background:#ff625b}.min{background:#ffbd44}.max{background:#32c85a}.wtitle{font-size:12px;font-weight:650;letter-spacing:.015em;flex:1;text-align:center;margin-right:46px;color:rgba(255,255,255,.9)}
+.window-body{height:calc(100% - 46px);overflow:auto;padding:18px}
+.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);border-radius:14px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.muted{color:var(--muted)}.small{font-size:11px}.app-title{font-size:20px;font-weight:720;letter-spacing:-.04em;margin:0 0 5px}.row{display:flex;align-items:center;gap:12px}.between{justify-content:space-between}.stack{display:flex;flex-direction:column;gap:12px}
+#dock-wrap{position:absolute;z-index:60;bottom:18px;left:50%;transform:translateX(-50%);max-width:calc(100vw - 24px);padding:8px 11px;border:1px solid rgba(255,255,255,.28);border-radius:24px;background:linear-gradient(135deg,rgba(235,245,255,.2),rgba(95,119,150,.18) 45%,rgba(20,31,49,.46));backdrop-filter:blur(34px) saturate(1.8);-webkit-backdrop-filter:blur(34px) saturate(1.8);box-shadow:0 18px 48px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.4),inset 0 -1px 0 rgba(255,255,255,.08)}
+#dock{display:flex;align-items:end;gap:8px}.dock-item{position:relative;width:49px;height:49px;border:1px solid rgba(255,255,255,.26);border-radius:15px;background:linear-gradient(145deg,rgba(255,255,255,.3),rgba(255,255,255,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.32),0 7px 14px rgba(0,0,0,.2);display:grid;place-items:center;transition:transform .18s cubic-bezier(.2,.8,.2,1),filter .18s}.dock-item:hover{transform:translateY(-9px) scale(1.13);filter:brightness(1.16)}.dock-item svg{width:25px;height:25px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.2))}.dock-item .dot{position:absolute;bottom:-5px;width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.8)}
+#launcher{position:absolute;z-index:70;left:50%;bottom:92px;transform:translateX(-50%);width:min(540px,calc(100vw - 28px));padding:18px;border-radius:24px;border:1px solid rgba(255,255,255,.24);background:rgba(22,32,47,.72);backdrop-filter:blur(36px) saturate(1.6);box-shadow:var(--shadow);display:none}#launcher.show{display:block;animation:appear .22s ease}.search{width:100%;border:1px solid rgba(255,255,255,.16);border-radius:13px;padding:12px 14px;background:rgba(255,255,255,.09);color:white;outline:none}.app-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}.app-tile{border:0;background:transparent;border-radius:14px;padding:12px 5px;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11px}.app-tile:hover{background:rgba(255,255,255,.1)}.app-icon{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,255,255,.32),rgba(255,255,255,.1));border:1px solid rgba(255,255,255,.2)}.app-icon svg{width:23px;height:23px}
+#control{position:absolute;z-index:75;right:22px;top:60px;width:300px;padding:16px;border:1px solid rgba(255,255,255,.24);border-radius:22px;background:rgba(20,30,45,.72);backdrop-filter:blur(36px) saturate(1.6);box-shadow:var(--shadow);display:none}#control.show{display:block;animation:appear .2s ease}.toggle{padding:13px;border-radius:14px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.1);font-size:12px}.toggle.active{background:color-mix(in srgb,var(--accent) 45%,rgba(255,255,255,.12));border-color:rgba(255,255,255,.22)}.control-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.slider{width:100%;accent-color:var(--accent)}
+#toast{position:absolute;z-index:90;top:65px;left:50%;transform:translateX(-50%);padding:10px 16px;border-radius:13px;border:1px solid var(--line);background:rgba(18,28,42,.8);backdrop-filter:blur(24px);font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s}#toast.show{opacity:1}
+#hint{position:absolute;z-index:1;right:26px;bottom:102px;color:rgba(255,255,255,.5);font-size:11px;text-align:right}
+#launcher,#control{color:var(--fg)}
+@media(max-width:650px){#menubar{left:8px;right:8px;top:8px;padding:0 10px}.menu-left,.menu-right{gap:9px;font-size:10px}.hide-mobile{display:none}#desktop-label{left:16px;top:61px}.window{left:4%!important;top:14%!important;width:92%!important;height:70%!important;min-width:0}.dock-item{width:43px;height:43px;border-radius:13px}#dock{gap:6px}#dock-wrap{bottom:10px}.app-grid{grid-template-columns:repeat(3,1fr)}#hint{display:none}}
+</style>
+</head>
+<body>
+<div id="desktop">
+  <header id="menubar">
+    <div class="menu-left"><span class="brand">◈ D3X8</span><span class="menulink">File</span><span class="menulink">Edit</span><span class="menulink hide-mobile">View</span><span class="menulink hide-mobile">Window</span></div>
+    <div class="menu-right"><span class="status hide-mobile">◉ Preview session</span><button id="control-button" class="status" style="border:0;background:none;padding:0" aria-label="Control Center">◉</button><span class="status">⌁</span><span class="status" id="clock">9:41 PM</span></div>
+  </header>
+  <div id="desktop-label">D3X8 · Liquid Glass Desktop</div>
+  <div id="window-layer"></div>
+  <div id="launcher" aria-label="Application launcher"><input id="app-search" class="search" placeholder="Search applications…" autocomplete="off"><div id="app-grid" class="app-grid"></div></div>
+  <div id="control">
+    <div class="row between" style="margin-bottom:13px"><b style="font-size:14px">Control Center</b><span class="muted small">D3X8</span></div>
+    <div class="control-grid"><button class="toggle active">◈ Wi-Fi<br><span class="muted small">Connected</span></button><button class="toggle active">⌁ Bluetooth<br><span class="muted small">On</span></button><button class="toggle">◐ Focus<br><span class="muted small">Off</span></button><button class="toggle active">☾ Appearance<br><span class="muted small">Dark</span></button></div>
+    <div class="panel" style="margin-top:11px"><div class="row between small"><span>Display brightness</span><span>82%</span></div><input class="slider" type="range" min="0" max="100" value="82"></div>
+    <div class="panel" style="margin-top:9px"><div class="row between small"><span>Sound</span><span>64%</span></div><input class="slider" type="range" min="0" max="100" value="64"></div>
+  </div>
+  <div id="toast"></div>
+  <div id="hint">Click dock icons to open apps<br>Drag window titlebars · Try Control Center</div>
+  <div id="dock-wrap"><nav id="dock" aria-label="Dock"></nav></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const icons={
+ finder:'<svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="3" width="19" height="18" rx="5" fill="#70B8F5"/><path d="M12 3v18M5 10h4m6 0h4M8 16l2-2m6 2-2-2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>',
+ settings:'<svg viewBox="0 0 24 24" fill="none"><path d="M10 2h4l.7 2.5 2 .9 2.3-1.2 2.8 2.8-1.2 2.3.9 2L24 12v4l-2.5.7-.9 2 1.2 2.3-2.8 2.8-2.3-1.2-2 .9L14 26h-4l-.7-2.5-2-.9L5 23.8l-2.8-2.8 1.2-2.3-.9-2L0 16v-4l2.5-.7.9-2L2.2 7l2.8-2.8 2.3 1.2 2-.9L10 2Z" transform="translate(0 -2)" fill="#A7B1C3"/><circle cx="12" cy="12" r="3.4" fill="#56647A" stroke="#fff" stroke-width="1.2"/></svg>',
+ terminal:'<svg viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="5" fill="#202B3A" stroke="#91A8C6"/><path d="m6 9 3 3-3 3m6 0h5" stroke="#EAF3FF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ monitor:'<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="14" rx="3" fill="#6B8FB9"/><path d="M8 21h8m-4-4v4m-5-9 3-3 3 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>',
+ notes:'<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="3" fill="#F4D36B"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#6A5721" stroke-width="1.4" stroke-linecap="round"/></svg>',
+ photos:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="6" r="4" fill="#F28C8C"/><circle cx="18" cy="12" r="4" fill="#F2CB67"/><circle cx="12" cy="18" r="4" fill="#75C8A2"/><circle cx="6" cy="12" r="4" fill="#79A8EE"/></svg>',
+ launcher:'<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="2" fill="#F28C8C"/><rect x="14" y="3" width="7" height="7" rx="2" fill="#79A8EE"/><rect x="3" y="14" width="7" height="7" rx="2" fill="#F2CB67"/><rect x="14" y="14" width="7" height="7" rx="2" fill="#75C8A2"/></svg>'
+};
+const apps=[
+ {id:'finder',name:'Files',icon:'finder',title:'Files',w:700,h:440},
+ {id:'settings',name:'Settings',icon:'settings',title:'System Settings',w:720,h:470},
+ {id:'terminal',name:'Terminal',icon:'terminal',title:'Terminal',w:650,h:390},
+ {id:'monitor',name:'System Monitor',icon:'monitor',title:'System Monitor',w:620,h:410},
+ {id:'notes',name:'Notes',icon:'notes',title:'Notes',w:520,h:390},
+ {id:'photos',name:'Gallery',icon:'photos',title:'Gallery',w:600,h:420}
+];
+let z=20,opened={},drag=null;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),1700)}
+function appContent(id){
+ if(id==='finder')return '<div class="row" style="height:100%;align-items:stretch"><aside style="width:145px;flex:none;border-right:1px solid rgba(255,255,255,.1);padding-right:12px" class="stack"><b class="small muted">FAVORITES</b><span>◫ Recents</span><span>▣ Applications</span><span>⌂ Desktop</span><span>↓ Downloads</span><b class="small muted" style="margin-top:15px">LOCATIONS</b><span>◧ D3X8 Disk</span></aside><main style="flex:1" class="stack"><div class="row between"><div><h2 class="app-title">Applications</h2><span class="muted small">6 items</span></div><button class="toggle" onclick="toast(\'Sort options\')">☷ View</button></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+apps.map(a=>'<div class="panel" style="text-align:center"><div style="font-size:27px">'+icons[a.icon]+'</div><div class="small" style="margin-top:8px">'+a.name+'</div></div>').join('')+'</div></main></div>';
+ if(id==='settings')return '<div class="row" style="height:100%;align-items:stretch"><aside style="width:170px;flex:none;border-right:1px solid rgba(255,255,255,.1);padding-right:12px" class="stack"><input class="search" placeholder="Search settings"><b class="small muted">SYSTEM</b><span>◉ Appearance</span><span>⌨ Keyboard</span><span>⌁ Network</span><span>◷ Notifications</span><span>◧ Displays</span><b class="small muted">HARDWARE</b><span>⌁ Sound</span><span>⌘ Input</span></aside><main style="flex:1" class="stack"><div><h2 class="app-title">Appearance</h2><span class="muted small">Personalize your desktop experience</span></div><div class="panel"><div class="row between"><div><b>Liquid Glass</b><div class="muted small">Translucent surfaces and optical highlights</div></div><button class="toggle active" onclick="this.classList.toggle(\'active\');toast(\'Glass appearance toggled\')">On</button></div></div><div class="panel"><b>Accent color</b><div class="row" style="margin-top:12px;gap:10px">'+['#0a84ff','#9a78ef','#e58aab','#39b98a','#e5a64b'].map(c=>'<button onclick="document.documentElement.style.setProperty(\'--accent\',\''+c+'\')" style="width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:'+c+'"></button>').join('')+'</div></div><div class="panel row between"><div><b>Reduce motion</b><div class="muted small">Use fewer animated transitions</div></div><input type="checkbox" onchange="document.body.classList.toggle(\'reduced-motion\',this.checked)"></div></main></div>';
+ if(id==='terminal')return '<div style="height:100%;padding:4px 2px;font:13px/1.8 ui-monospace,SFMono-Regular,monospace;color:#d9e7f8"><div class="muted">D3X8 Terminal · preview shell</div><div><span style="color:#77d5a3">guest@d3x8</span>:<span style="color:#86baff">~</span>$ neofetch</div><pre style="color:#a8d0ff;font-size:11px;line-height:1.4">    ◈ D3X8
+   /|\  Native desktop
+  /_|_\\  Liquid Glass UI
+    |   Karm-inspired
+    |   x86_64</pre><div>GUI preview session. No OS commands are executed here.</div><div style="margin-top:10px"><span style="color:#77d5a3">guest@d3x8</span>:<span style="color:#86baff">~</span>$ <input aria-label="Preview command" placeholder="type help" style="background:transparent;border:0;color:white;outline:none;width:55%" onkeydown="if(event.key===\'Enter\'){toast(this.value===\'help\'?\'Preview commands: help, clear, neofetch\':\'Browser preview only. No shell execution.\');this.value=\'\'}"></div></div>';
+ if(id==='monitor')return '<div class="stack"><div class="row" style="gap:10px"><div class="panel" style="flex:1"><div class="muted small">CPU</div><div style="font-size:25px;font-weight:700">12<span class="small">%</span></div><div style="height:5px;background:rgba(255,255,255,.12);border-radius:9px;margin-top:10px"><div style="height:100%;width:12%;background:var(--accent);border-radius:9px"></div></div></div><div class="panel" style="flex:1"><div class="muted small">MEMORY</div><div style="font-size:25px;font-weight:700">3.2<span class="small"> GB</span></div><div style="height:5px;background:rgba(255,255,255,.12);border-radius:9px;margin-top:10px"><div style="height:100%;width:42%;background:#68c8a0;border-radius:9px"></div></div></div><div class="panel" style="flex:1"><div class="muted small">PROCESSES</div><div style="font-size:25px;font-weight:700">24</div></div></div><div class="panel"><b>Processes</b><div class="row between small muted" style="margin-top:13px"><span>Harp Desktop</span><span>4.2%</span></div><div class="row between small muted"><span>Window Server</span><span>2.8%</span></div><div class="row between small muted"><span>System UI</span><span>1.1%</span></div><div class="row between small muted"><span>Preview Renderer</span><span>0.6%</span></div></div></div>';
+ if(id==='notes')return '<div class="stack"><h2 class="app-title">Welcome to D3X8</h2><div class="muted small">A little note from the desktop</div><textarea style="width:100%;height:230px;resize:none;border:1px solid rgba(255,255,255,.13);border-radius:13px;background:rgba(255,255,255,.07);padding:14px;color:white;outline:none" placeholder="Start typing…">The desktop is a live browser concept of the D3X8 GUI. It previews the visual direction, not the running operating system.</textarea></div>';
+ return '<div class="stack"><h2 class="app-title">Gallery</h2><div class="muted small">Desktop wallpapers and visual explorations</div><div style="height:230px;border-radius:15px;background:radial-gradient(ellipse at 25% 30%,#4685ad,transparent 38%),radial-gradient(ellipse at 70% 40%,#7662a3,transparent 42%),linear-gradient(145deg,#15243b,#0b1728)"></div></div>';
+}
+function openApp(id){$('#launcher').classList.remove('show');const a=apps.find(x=>x.id===id);if(!a)return;if(opened[id]){const w=document.getElementById('win-'+id);w.style.display='block';w.style.zIndex=++z;return}
+ const w=document.createElement('section');w.className='window';w.id='win-'+id;w.style.width=Math.min(a.w,innerWidth-36)+'px';w.style.height=Math.min(a.h,innerHeight-140)+'px';w.style.left=Math.max(18,(innerWidth-a.w)/2+(Object.keys(opened).length*24)%130)+'px';w.style.top=Math.max(72,(innerHeight-a.h)/2-12+(Object.keys(opened).length*18)%80)+'px';w.style.zIndex=++z;
+ w.innerHTML='<div class="titlebar"><div class="traffic"><button class="close" aria-label="Close"></button><button class="min" aria-label="Minimize"></button><button class="max" aria-label="Maximize"></button></div><div class="wtitle">'+a.title+'</div></div><div class="window-body">'+appContent(id)+'</div>';
+ w.querySelector('.close').onclick=()=>{w.remove();delete opened[id];setDot(id,false)};
+ w.querySelector('.min').onclick=()=>{w.style.display='none';toast(a.name+' minimized')};
+ w.querySelector('.max').onclick=()=>{if(w.dataset.max==='1'){w.style.left=w.dataset.left;w.style.top=w.dataset.top;w.style.width=w.dataset.width;w.style.height=w.dataset.height;w.dataset.max='0'}else{Object.assign(w.dataset,{left:w.style.left,top:w.style.top,width:w.style.width,height:w.style.height});Object.assign(w.style,{left:'18px',top:'62px',width:'calc(100vw - 36px)',height:'calc(100vh - 150px)'});w.dataset.max='1'}};
+ w.querySelector('.titlebar').addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;w.style.zIndex=++z;drag={w,x:e.clientX,y:e.clientY,left:w.offsetLeft,top:w.offsetTop};w.querySelector('.titlebar').setPointerCapture(e.pointerId)});
+ w.querySelector('.titlebar').addEventListener('pointermove',e=>{if(!drag||drag.w!==w)return;w.style.left=Math.max(0,drag.left+e.clientX-drag.x)+'px';w.style.top=Math.max(44,drag.top+e.clientY-drag.y)+'px'});
+ w.querySelector('.titlebar').addEventListener('pointerup',()=>drag=null);
+ w.addEventListener('pointerdown',()=>w.style.zIndex=++z);
+ $('#window-layer').appendChild(w);opened[id]=true;setDot(id,true);
+}
+function setDot(id,on){const el=document.querySelector('[data-app="'+id+'"] .dot');if(el)el.style.display=on?'block':'none'}
+function toggleLauncher(){$('#launcher').classList.toggle('show');if($('#launcher').classList.contains('show')){$('#app-search').value='';renderApps();$('#app-search').focus()}}
+function renderApps(filter=''){$('#app-grid').innerHTML=apps.filter(a=>a.name.toLowerCase().includes(filter.toLowerCase())).map(a=>'<button class="app-tile" data-launch="'+a.id+'"><span class="app-icon">'+icons[a.icon]+'</span>'+a.name+'</button>').join('');$('#app-grid').querySelectorAll('[data-launch]').forEach(b=>b.onclick=()=>openApp(b.dataset.launch))}
+$('#app-search').addEventListener('input',e=>renderApps(e.target.value));
+const dock=[...apps.slice(0,6),{id:'launcher',name:'Launchpad',icon:'launcher'}];
+$('#dock').innerHTML=dock.map(a=>'<button class="dock-item" data-app="'+a.id+'" aria-label="'+a.name+'" title="'+a.name+'">'+icons[a.icon]+'<span class="dot" style="display:none"></span></button>').join('');
+$('#dock').querySelectorAll('[data-app]').forEach(b=>b.onclick=()=>b.dataset.app==='launcher'?toggleLauncher():openApp(b.dataset.app));
+$('#control-button').onclick=()=>$('#control').classList.toggle('show');
+$('#control').querySelectorAll('.toggle').forEach(b=>b.onclick=()=>b.classList.toggle('active'));
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#launcher')&&!e.target.closest('[data-app="launcher"]'))$('#launcher').classList.remove('show');if(!e.target.closest('#control')&&!e.target.closest('#control-button'))$('#control').classList.remove('show')});
+function tick(){const d=new Date();$('#clock').textContent=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}tick();setInterval(tick,15000);
+renderApps();
+openApp('finder');
+fetch('./theme.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(t=>{if(!t)return;for(const [k,v] of Object.entries(t.css||{}))document.documentElement.style.setProperty(k,v);document.documentElement.dataset.source='native-harp'}).catch(()=>{});
+window.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();toggleLauncher()}if(e.key==='Escape'){$('#launcher').classList.remove('show');$('#control').classList.remove('show')}});
+</script>
+</body></html>
