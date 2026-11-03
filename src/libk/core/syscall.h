@@ -19,6 +19,10 @@
 #include <stdint.h>
 #include "mem.h"
 
+struct task;
+int user_copy_validate(struct task *task, uint64_t uaddr, size_t len, int write_access);
+int copy_to_user(struct task *task, uint64_t dst, const void *src, size_t len);
+
 #define SYSCALL_EXEC             0
 #define SYSCALL_EXIT             1
 #define SYSCALL_GETPID           2
