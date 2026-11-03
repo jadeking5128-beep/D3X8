@@ -9,7 +9,7 @@ INSTALL_PATH ?= /bin/$(APP)
 CC  := clang
 LD  := ld.lld
 
-SRCS = harp_main.c harp_wm.c harp_draw.c harp_input.c harp_glass.c harp_stb_image_impl.c harp_stb_image_write_impl.c
+SRCS = harp_main.c harp_wm.c harp_draw.c harp_input.c harp_glass.c harp_ui.c harp_stb_image_impl.c harp_stb_image_write_impl.c
 OBJS = $(SRCS:.c=.o)
 
 COMMON_CPPFLAGS := \
