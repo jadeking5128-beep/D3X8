@@ -13,7 +13,7 @@
 
 [![D3X8 Liquid Glass GUI preview](preview/preview.svg)](https://jadeking5128-beep.github.io/D3X8/)
 
-The preview is deployed with GitHub Pages. Its color tokens are extracted automatically from Harp's native C theme in `userland/include/nk_harp.h` and desktop palette in `userland/files/harp/harp_draw.c` whenever the GUI source changes.
+The preview is published through GitHub Pages after the repository's Pages source is enabled as **GitHub Actions** in Settings → Pages. Its color tokens are extracted automatically from Harp's native C theme in `userland/include/nk_harp.h` and desktop palette in `userland/files/harp/harp_draw.c` whenever the GUI source changes.
 
 ---
 
