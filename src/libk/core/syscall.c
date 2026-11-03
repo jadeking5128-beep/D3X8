@@ -244,7 +244,7 @@ static uint64_t user_find_mmap_range(task_t *task, uint64_t hint, size_t pages)
     return 0;
 }
 
-static int user_copy_validate(task_t *task, uint64_t uaddr, size_t len, int write_access)
+int user_copy_validate(task_t *task, uint64_t uaddr, size_t len, int write_access)
 {
     if (!len)
         return 0;
@@ -311,7 +311,7 @@ static int copy_from_user(task_t *task, void *dst, uint64_t src, size_t len)
     return 0;
 }
 
-static int copy_to_user(task_t *task, uint64_t dst, const void *src, size_t len)
+int copy_to_user(task_t *task, uint64_t dst, const void *src, size_t len)
 {
     if (!src || user_copy_validate(task, dst, len, 1) < 0)
         return -14;
@@ -2491,12 +2491,11 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
 
     case SYSCALL_PIPE:
     {
-        int *pipefd = (int *)arg1;
-        if (!pipefd)
-            return -1;
         task_t *cur = sched_current_task();
         if (!cur || !cur->fd_table)
             return -1;
+        if (user_copy_validate(cur, arg1, sizeof(int) * 2, 1) < 0)
+            return (uint64_t)(int64_t)-14;
         int rfd = fd_alloc(cur->fd_table);
         if (rfd < 0)
             return -1;
@@ -2529,8 +2528,14 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
         we->type = FD_PIPE_WRITE;
         we->used = 1;
         we->pipe = pb;
-        pipefd[0] = rfd;
-        pipefd[1] = wfd;
+        int pipe_fds[2] = {rfd, wfd};
+        if (copy_to_user(cur, arg1, pipe_fds, sizeof(pipe_fds)) < 0)
+        {
+            memset(re, 0, sizeof(*re));
+            memset(we, 0, sizeof(*we));
+            kfree(pb);
+            return (uint64_t)(int64_t)-14;
+        }
         return 0;
     }
 
@@ -2811,6 +2816,10 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
         int op = (int)arg2;
         uint32_t val = (uint32_t)arg3;
 
+        task_t *cur = sched_current_task();
+        if (!cur || !uaddr || ((uintptr_t)uaddr & (sizeof(uint32_t) - 1)) ||
+            user_copy_validate(cur, (uint64_t)(uintptr_t)uaddr, sizeof(uint32_t), 0) < 0)
+            return (uint64_t)(int64_t)-14;
         if (op == FUTEX_WAIT)
             return (uint64_t)(int64_t)sched_futex_wait(uaddr, val);
         if (op == FUTEX_WAKE)
