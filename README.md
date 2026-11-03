@@ -1,7 +1,7 @@
 # D3X8■
 
 <p align="center">
-  <img width="100%" alt="D3X8 operating system" src="https://github.com/user-attachments/assets/4a3141c6-4223-465a-9b38-9f5d851f0b83" />
+  <img width="100%" alt="D3X8 operating system" src="https://github.com/sectorx83/D3X8/blob/bcc1dd3c6db6718abfa698b2ed0b66234761d84d/1793719166632.png" />
 </p>
 
 <p align="center">
