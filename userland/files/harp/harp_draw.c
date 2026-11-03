@@ -533,7 +533,7 @@ void draw_window(int idx, int full_frame)
     int focused = (idx == focused_win);
     uint32_t tc = focused ? C_TITLEBAR_F : C_TITLEBAR;
 
-    bb_rrect_alpha_top(fx, fy, fw, TITLEBAR_H, WIN_R, tc, 150);
+    harp_glass_rrect(s_backbuf, (int)SCR_W, (int)SCR_H, fx, fy, fw, TITLEBAR_H, WIN_R, focused ? 0xFF263B55u : 0xFF171F2Au, focused ? 86 : 66, 3, 1);
 
     uint32_t corner_save[WIN_R * WIN_R * 2];
     int cs_idx = 0;
