@@ -97,7 +97,6 @@ void harp_ui_on_click(HarpUiNode *node, HarpUiClickFn callback, void *userdata)
 }
 
 static int ui_min(int a, int b) { return a < b ? a : b; }
-static int ui_max(int a, int b) { return a > b ? a : b; }
 
 static void ui_layout_node(HarpUiNode *node, int x, int y, int w, int h)
 {
@@ -112,10 +111,12 @@ static void ui_layout_node(HarpUiNode *node, int x, int y, int w, int h)
     if (ih < 0) ih = 0;
 
     if (node->type != HARP_UI_ROW && node->type != HARP_UI_COLUMN &&
-        node->type != HARP_UI_STACK && node->type != HARP_UI_CONTAINER)
+        node->type != HARP_UI_STACK && node->type != HARP_UI_CONTAINER &&
+        node->type != HARP_UI_GLASS)
         return;
 
-    if (node->type == HARP_UI_STACK || node->type == HARP_UI_CONTAINER) {
+    if (node->type == HARP_UI_STACK || node->type == HARP_UI_CONTAINER ||
+        node->type == HARP_UI_GLASS) {
         for (size_t i = 0; i < node->child_count; i++) {
             HarpUiNode *child = node->children[i];
             int cw = child->preferred_w > 0 ? ui_min(child->preferred_w, iw) : iw;
@@ -183,7 +184,8 @@ static void ui_render_node(HarpUiNode *node, const HarpUiRenderer *renderer)
     if (node->type == HARP_UI_GLASS && renderer->glass_rect) {
         renderer->glass_rect(renderer->userdata, node->x, node->y,
                              node->w, node->h, node->style.radius,
-                             node->style.background, node->style.opacity);
+                             node->style.background, node->style.opacity,
+                             node->style.refraction, node->style.blur_radius);
     } else if ((node->type == HARP_UI_CONTAINER || node->type == HARP_UI_BUTTON) &&
                renderer->fill_rect) {
         uint32_t color = node->style.background;
