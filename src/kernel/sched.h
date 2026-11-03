@@ -96,7 +96,7 @@ void sched_abort_current(int exit_code) __attribute__((noreturn));
 void sched_tick(registers_t *irq_regs);
 task_t *sched_current_task(void);
 task_t *sched_get_task_list(void);
-uint32_t sched_list_tasks(task_info_t *infos, uint32_t max_count);
+int64_t sched_list_tasks(task_info_t *infos, uint32_t max_count);
 int sched_futex_wait(volatile uint32_t *uaddr, uint32_t expected);
 uint32_t sched_futex_wake(volatile uint32_t *uaddr, uint32_t count);
 int sched_kill(uint64_t pid);
