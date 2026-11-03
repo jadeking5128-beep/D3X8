@@ -1,0 +1,46 @@
+name: D3X8 GUI Live Preview
+
+on:
+  push:
+    branches: [main, feat/karm-liquid-glass-gui]
+    paths:
+      - "preview/**"
+      - "userland/files/harp/**"
+      - "userland/include/nk_harp.h"
+      - ".github/workflows/gui-preview.yml"
+      - "README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: d3x8-gui-preview
+  cancel-in-progress: true
+
+jobs:
+  build-preview:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GUI source
+        uses: actions/checkout@v4
+
+      - name: Extract native GUI theme tokens
+        run: python3 preview/sync-theme.py
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload GUI preview
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: preview
+
+      - name: Deploy live GUI preview
+        id: deployment
+        uses: actions/deploy-pages@v4
