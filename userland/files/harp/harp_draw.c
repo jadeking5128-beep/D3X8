@@ -39,6 +39,7 @@
 
 #include "harp_draw.h"
 #include "harp_wm.h"
+#include "harp_glass.h"
 
 #define FONT_SIZE    16
 #define BASELINE(y)  ((y) + FONT_SIZE + 1)
@@ -637,8 +638,7 @@ void draw_dash(void)
     int dt = dash_area_top();
     int lx = DASH_MARGIN, ly = dt;
 
-    dash_blit_backdrop(lx, LEFT_W);
-    bb_rrect_alpha(lx, ly, LEFT_W, DASH_H, DASH_R, C_DASH, TILE_ALPHA);
+    harp_glass_rrect(s_backbuf, (int)SCR_W, (int)SCR_H, lx, ly, LEFT_W, DASH_H, DASH_R, 0xFFB9CBE2u, 72, 5, 2);
 
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -654,8 +654,7 @@ void draw_dash(void)
 
     int shot_x = 0, shot_y = 0, shot_w = 0;
     if (screenshot_dash_layout(&shot_x, &shot_y, &shot_w)) {
-        dash_blit_backdrop(shot_x, shot_w);
-        bb_rrect_alpha(shot_x, shot_y, shot_w, DASH_H, DASH_R, C_DASH, TILE_ALPHA);
+        harp_glass_rrect(s_backbuf, (int)SCR_W, (int)SCR_H, shot_x, shot_y, shot_w, DASH_H, DASH_R, 0xFFB9CBE2u, 72, 5, 2);
 
         int ix = shot_x + LAUNCH_PAD;
         int iy = shot_y + (DASH_H - LAUNCH_ICON) / 2;
@@ -665,8 +664,7 @@ void draw_dash(void)
 
     int power_x = 0, power_y = 0, power_w = 0;
     if (power_dash_layout(&power_x, &power_y, &power_w)) {
-        dash_blit_backdrop(power_x, power_w);
-        bb_rrect_alpha(power_x, power_y, power_w, DASH_H, DASH_R, C_DASH, TILE_ALPHA);
+        harp_glass_rrect(s_backbuf, (int)SCR_W, (int)SCR_H, power_x, power_y, power_w, DASH_H, DASH_R, 0xFFB9CBE2u, 72, 5, 2);
 
         int ix = power_x + LAUNCH_PAD;
         int iy = power_y + (DASH_H - LAUNCH_ICON) / 2;
@@ -676,8 +674,7 @@ void draw_dash(void)
 
     int launch_x = 0, launch_y = 0, launch_w = 0;
     if (launcher_dash_layout(&launch_x, &launch_y, &launch_w)) {
-        dash_blit_backdrop(launch_x, launch_w);
-        bb_rrect_alpha(launch_x, launch_y, launch_w, DASH_H, DASH_R, C_DASH, TILE_ALPHA);
+        harp_glass_rrect(s_backbuf, (int)SCR_W, (int)SCR_H, launch_x, launch_y, launch_w, DASH_H, DASH_R, 0xFFB9CBE2u, 72, 5, 2);
 
         int ix = launch_x + LAUNCH_PAD;
         int iy = launch_y + (DASH_H - LAUNCH_ICON) / 2;
@@ -704,8 +701,7 @@ void draw_dash(void)
     int rx = 0, ry = 0, total_w = 0, visible = 0;
     if (!running_dash_layout(&rx, &ry, &total_w, &visible)) return;
 
-    dash_blit_backdrop(rx, total_w);
-    bb_rrect_alpha(rx, ry, total_w, DASH_H, DASH_R, C_DASH, TILE_ALPHA);
+    harp_glass_rrect(s_backbuf, (int)SCR_W, (int)SCR_H, rx, ry, total_w, DASH_H, DASH_R, 0xFFB9CBE2u, 72, 5, 2);
 
     int bx = rx + DASH_PAD;
     int top = z_top();
