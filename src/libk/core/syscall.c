@@ -1729,26 +1729,36 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
 
     case SYSCALL_SYSINFO:
     {
-        sysinfo_t *info = (sysinfo_t *)arg1;
-        if (!info)
-            return -22;
-        memset(info, 0, sizeof(*info));
-        info->uptime = (int64_t)(hpet_monotonic_ns() / 1000000000ULL);
-        info->totalram = get_total_memory();
-        info->freeram = get_free_memory();
-        info->mem_unit = 1;
-        task_info_t tasks[64];
-        info->procs = (uint16_t)sched_list_tasks(tasks, 64);
-        return 0;
+        task_t *cur = sched_current_task();
+        sysinfo_t info;
+        if (!cur || user_copy_validate(cur, arg1, sizeof(info), 1) < 0)
+            return -14;
+        memset(&info, 0, sizeof(info));
+        info.uptime = (int64_t)(hpet_monotonic_ns() / 1000000000ULL);
+        info.totalram = get_total_memory();
+        info.freeram = get_free_memory();
+        info.mem_unit = 1;
+        task_t *head = sched_get_task_list();
+        if (head) {
+            task_t *iter = head;
+            do {
+                if (iter->state != TASK_DEAD && info.procs < UINT16_MAX)
+                    info.procs++;
+                iter = iter->next;
+            } while (iter && iter != head);
+        }
+        return copy_to_user(cur, arg1, &info, sizeof(info));
     }
 
     case SYSCALL_SCHED_GETAFFINITY:
     {
         pid_t pid = (pid_t)arg1;
         size_t cpusetsize = (size_t)arg2;
-        uint8_t *mask = (uint8_t *)arg3;
-        if (!mask || cpusetsize == 0 || cpusetsize > 128)
-            return -22;
+        uint8_t mask[128];
+        task_t *cur = sched_current_task();
+        if (!cur || cpusetsize == 0 || cpusetsize > sizeof(mask) ||
+            user_copy_validate(cur, arg3, cpusetsize, 1) < 0)
+            return -14;
         if (pid < 0)
             return -3;
         memset(mask, 0, cpusetsize);
@@ -1758,17 +1768,18 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
         size_t max_bits = cpusetsize * 8;
         for (uint32_t i = 0; i < cpu_count && i < max_bits; i++)
             mask[i / 8] |= (uint8_t)(1U << (i % 8));
-        return 0;
+        return copy_to_user(cur, arg3, mask, cpusetsize);
     }
 
     case SYSCALL_SCHED_SETAFFINITY:
     {
         pid_t pid = (pid_t)arg1;
         size_t cpusetsize = (size_t)arg2;
-        const uint8_t *mask = (const uint8_t *)arg3;
+        uint8_t mask[128];
         task_t *cur = sched_current_task();
-        if (!cur || !mask || cpusetsize == 0 || cpusetsize > 128)
-            return -22;
+        if (!cur || cpusetsize == 0 || cpusetsize > sizeof(mask) ||
+            copy_from_user(cur, mask, arg3, cpusetsize) < 0)
+            return -14;
         if (pid != 0 && (uint64_t)pid != cur->pid)
             return -38;
 
@@ -2325,9 +2336,12 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
 
     case SYSCALL_UNAME:
     {
-        utsname_t *buf = (utsname_t *)arg1;
-        if (!buf)
-            return -1;
+        task_t *cur = sched_current_task();
+        utsname_t local;
+        utsname_t *buf = &local;
+        if (!cur || user_copy_validate(cur, arg1, sizeof(local), 1) < 0)
+            return -14;
+        memset(buf, 0, sizeof(*buf));
 
         const char *sysname = "ZenOS";
         const char *machine = "x86_64";
@@ -2388,7 +2402,7 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
         }
         buf->machine[i] = '\0';
 
-        return 0;
+        return copy_to_user(cur, arg1, buf, sizeof(*buf));
     }
 
     case SYSCALL_LOG:
@@ -2423,13 +2437,11 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
 
     case SYSCALL_GET_FRAMEBUFFER:
     {
-        fb_info_t *info = (fb_info_t *)arg1;
-        if (!info)
-            return -1;
-
         task_t *current = sched_current_task();
-        if (!current || !current->pml4)
-            return -1;
+        fb_info_t info;
+        if (!current || !current->pml4 ||
+            user_copy_validate(current, arg1, sizeof(info), 1) < 0)
+            return -14;
         uint64_t fb_phys = virt_to_phys(get_kernel_pml4(), (uint64_t)framebuffer_addr);
         if (!fb_phys)
             return -1;
@@ -2446,13 +2458,13 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
             map_page(current->pml4, virt, phys, PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER);
         }
 
-        info->addr = user_fb_vaddr;
-        info->width = framebuffer_width;
-        info->height = framebuffer_height;
-        info->bpp = framebuffer_bpp;
-        info->pitch = framebuffer_pitch;
+        info.addr = user_fb_vaddr;
+        info.width = framebuffer_width;
+        info.height = framebuffer_height;
+        info.bpp = framebuffer_bpp;
+        info.pitch = framebuffer_pitch;
 
-        return 0;
+        return copy_to_user(current, arg1, &info, sizeof(info));
     }
 
     case SYSCALL_IS_FOCUSED:
@@ -2743,13 +2755,15 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
     case SYSCALL_CONNECT:
     {
         int id = (int)arg1;
-        zen_sockaddr_in_t *addr = (zen_sockaddr_in_t *)arg2;
+        zen_sockaddr_in_t addr;
+        task_t *cur = sched_current_task();
         uint32_t addrlen = (uint32_t)arg3;
-        if (!addr || addrlen < sizeof(zen_sockaddr_in_t))
-            return (uint64_t)(int64_t)-22;
-        if (addr->sin_family != 2)
+        if (!cur || addrlen < sizeof(addr) ||
+            copy_from_user(cur, &addr, arg2, sizeof(addr)) < 0)
+            return (uint64_t)(int64_t)-14;
+        if (addr.sin_family != 2)
             return (uint64_t)(int64_t)-97;
-        return (uint64_t)(int64_t)tcp_connect_socket(id, addr->sin_addr, ntohs(addr->sin_port));
+        return (uint64_t)(int64_t)tcp_connect_socket(id, addr.sin_addr, ntohs(addr.sin_port));
     }
 
     case SYSCALL_SEND:
@@ -2757,8 +2771,9 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
         int id = (int)arg1;
         const void *buf = (const void *)arg2;
         size_t len = (size_t)arg3;
-        if (!buf)
-            return (uint64_t)(int64_t)-22;
+        task_t *cur = sched_current_task();
+        if (!cur || (len && user_copy_validate(cur, arg2, len, 0) < 0))
+            return (uint64_t)(int64_t)-14;
         return (uint64_t)(int64_t)tcp_send(id, buf, len);
     }
 
@@ -2767,8 +2782,9 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
         int id = (int)arg1;
         void *buf = (void *)arg2;
         size_t len = (size_t)arg3;
-        if (!buf)
-            return (uint64_t)(int64_t)-22;
+        task_t *cur = sched_current_task();
+        if (!cur || (len && user_copy_validate(cur, arg2, len, 1) < 0))
+            return (uint64_t)(int64_t)-14;
         return (uint64_t)(int64_t)tcp_recv(id, buf, len);
     }
 
@@ -2784,10 +2800,10 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
         pollfd_t *fds = (pollfd_t *)arg1;
         size_t count = (size_t)arg2;
         int timeout = (int)arg3;
-        if (!fds && count)
-            return -22;
-        if (count > 1024)
-            return -22;
+        task_t *cur = sched_current_task();
+        if (!cur || count > 1024 ||
+            (count && user_copy_validate(cur, arg1, count * sizeof(pollfd_t), 1) < 0))
+            return -14;
 
         int ready = poll_fds_once(fds, count);
         if (ready || timeout == 0)
@@ -2832,8 +2848,9 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
        
         int *slave_fd_out = (int *)(uintptr_t)arg1;
         task_t *cur = sched_current_task();
-        if (!cur || !cur->fd_table || !slave_fd_out)
-            return (uint64_t)(int64_t)-1;
+        if (!cur || !cur->fd_table ||
+            user_copy_validate(cur, arg1, sizeof(int), 1) < 0)
+            return (uint64_t)(int64_t)-14;
 
         pty_buf_t *pty = (pty_buf_t *)kmalloc(sizeof(pty_buf_t));
         if (!pty) return (uint64_t)(int64_t)-1;
@@ -2874,7 +2891,12 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
         se->type = FD_PTY_SLAVE;
         se->pty = pty;
 
-        *slave_fd_out = sfd;
+        if (copy_to_user(cur, arg1, &sfd, sizeof(sfd)) < 0) {
+            memset(me, 0, sizeof(*me));
+            memset(se, 0, sizeof(*se));
+            kfree(pty);
+            return (uint64_t)(int64_t)-14;
+        }
         return (uint64_t)(unsigned int)mfd;
     }
 
