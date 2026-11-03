@@ -156,15 +156,18 @@ void syscall_release_special_user_mappings(page_table_t *pml4)
 
 static int unix_sock_copy_user_path(task_t *task, const sa_un_t *addr, char *out, size_t out_len)
 {
-    if (!task || !addr || !out || out_len == 0)
+    sa_un_t local;
+    if (!task || !addr || !out || out_len < 2 ||
+        copy_from_user(task, &local, (uint64_t)(uintptr_t)addr, sizeof(local)) < 0)
+        return -14;
+
+    if (local.family != UNIX_AF_LOCAL)
         return -22;
 
-    if (addr->family != UNIX_AF_LOCAL)
-        return -22;
-
-    if (addr->path[0] == '/')
+    local.path[sizeof(local.path) - 1] = '\0';
+    if (local.path[0] == '/')
     {
-        strncpy(out, addr->path, out_len - 1);
+        strncpy(out, local.path, out_len - 1);
         out[out_len - 1] = '\0';
         return 0;
     }
@@ -173,7 +176,7 @@ static int unix_sock_copy_user_path(task_t *task, const sa_un_t *addr, char *out
         return -22;
 
     out[0] = '/';
-    strncpy(out + 1, addr->path, out_len - 2);
+    strncpy(out + 1, local.path, out_len - 2);
     out[out_len - 1] = '\0';
     return 0;
 }
@@ -2819,10 +2822,12 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
 
     case SYSCALL_GETHOSTBYNAME:
     {
-        const char *hostname = (const char *)arg1;
+        task_t *cur = sched_current_task();
+        char hostname[256];
         uint8_t *ip_out = (uint8_t *)arg2;
-        if (!hostname || !ip_out)
-            return -1;
+        if (!cur || copy_user_string(cur, arg1, hostname, sizeof(hostname)) < 0 ||
+            user_copy_validate(cur, arg2, 4, 1) < 0)
+            return (uint64_t)(int64_t)-14;
         return (uint64_t)(int64_t)dns_resolve(hostname, ip_out);
     }
 
