@@ -255,8 +255,9 @@ static void free_user_range(page_table_t *pml4, uint64_t start, uint64_t end)
     for (uint64_t v = start; v < end; v += PAGE_SIZE) {
         uint64_t phys = virt_to_phys(pml4, v);
         if (phys) {
-            free_page(phys);
+            /* Remove the stale translation before the frame can be reused. */
             unmap_page(pml4, v);
+            free_page(phys);
         }
     }
 }
