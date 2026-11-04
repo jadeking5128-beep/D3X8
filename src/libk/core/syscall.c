@@ -218,8 +218,9 @@ static void user_unmap_range(task_t *task, uint64_t start, size_t pages)
         uint64_t phys = virt_to_phys(task->pml4, virt);
         if (phys)
         {
-            free_page(phys);
+            /* Remove the stale translation before the frame can be reused. */
             unmap_page(task->pml4, virt);
+            free_page(phys);
         }
     }
 }
